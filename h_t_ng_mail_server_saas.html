@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full bg-[#fbf9f5]">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phân Tích Kiến Trúc Máy Chủ Mail SaaS Enterprise</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* Custom Styling for Chart Containers */
+    .chart-container {
+      position: relative;
+      width: 100%;
+      max-width: 680px;
+      margin-left: auto;
+      margin-right: auto;
+      height: 320px;
+      max-height: 400px;
+    }
+    @media (min-width: 768px) {
+      .chart-container {
+        height: 360px;
+      }
+    }
+
+    /* Custom Scrollbar for sleek look */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1efe9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+
+  <!-- Chosen Palette: Warm Neutral Harmonious (Bg: #fbf9f5, Card: #ffffff, Text: #1e293b, Primary: #0f172a, Accents: #2563eb, #d97706, #059669) -->
+  <!-- Application Structure Plan:
+       1. Navigation Bar: Persistent tabbed navigation to switch between thematic views (Overview/Comparison, Storage & TCO, Protocols & API, AI Processing, Reference Blueprint).
+       2. Header Dashboard Summary: Metric cards summarizing top findings (Stalwart as #1, S3 savings up to 70%, JMAP efficiency).
+       3. Section 1 (Overview & Matrix): Interactive Bar Chart comparing Memory Footprint + Sortable/Filterable Feature Table for Stalwart, WildDuck, Mailcow, Apache James, Zimbra.
+       4. Section 2 (Storage Architecture & TCO Calculator): Interactive slider-based TCO cost estimation comparing S3+Zstd (Stalwart) vs MongoDB GridFS (WildDuck) vs POSIX Maildir (Mailcow). Includes interactive visual breakdown.
+       5. Section 3 (Protocols & Automation API): Interactive capability explorer contrasting JMAP vs IMAP vs REST API with clickable code snippets (Sieve LLM, REST API).
+       6. Section 4 (AI Integration Pipeline): Interactive simulator showing dual-stage AI processing (Inline FTRL/Sieve LLM vs Event-driven Async Pipeline).
+       7. Section 5 (Reference SaaS Blueprint): Interactive multi-tier system layout detailing Edge, Stateless Cluster, Metadata DB, S3 Storage, and AI Cluster.
+  -->
+  <!-- Visualization & Content Choices:
+       - Memory Footprint Chart: Chart.js Bar Chart -> Quick visual comparison of resource consumption across platforms.
+       - TCO Cost Calculator: Dynamic Chart.js Stacked Bar + Interactive Form Inputs -> Instant cost feedback based on enterprise mailbox scale.
+       - Dynamic Interactive Code Block -> Provides real implementation snippets without cluttered UI.
+       - Dual-stage AI Score Simulator -> Dynamic interactive slider to demonstrate how Stalwart routes messages based on confidence scores.
+       - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+  -->
+  <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="h-full text-slate-800 font-sans antialiased flex flex-col">
+
+  <!-- TOP HEADER & NAV BAR -->
+  <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center space-x-3">
+          <span class="text-2xl">📧</span>
+          <div>
+            <h1 class="font-bold text-lg leading-tight">Mail SaaS Architecture Hub</h1>
+            <p class="text-xs text-slate-400">Nghiên Cứu Hạ Tầng Server Email Phân Tấn Enterprise</p>
+          </div>
+        </div>
+        <!-- Desktop Navigation Tabs -->
+        <nav class="hidden md:flex space-x-1" id="nav-tabs">
+          <button onclick="switchTab('overview')" id="tab-overview" class="px-3 py-2 rounded-md text-sm font-medium bg-slate-800 text-amber-400 transition">📊 So Sánh Nền Tảng</button>
+          <button onclick="switchTab('storage')" id="tab-storage" class="px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">💾 Lưu Trữ & TCO</button>
+          <button onclick="switchTab('protocols')" id="tab-protocols" class="px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">⚡ Giao Thức & API</button>
+          <button onclick="switchTab('ai')" id="tab-ai" class="px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">🤖 Tích Hợp AI</button>
+          <button onclick="switchTab('blueprint')" id="tab-blueprint" class="px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">🚀 Hạ Tầng Tham Chiếu</button>
+        </nav>
+      </div>
+    </div>
+    <!-- Mobile Nav Bar -->
+    <div class="md:hidden flex overflow-x-auto bg-slate-800 px-2 py-2 text-xs space-x-2 border-t border-slate-700">
+      <button onclick="switchTab('overview')" id="mtab-overview" class="px-3 py-1.5 rounded whitespace-nowrap bg-amber-500 text-slate-900 font-bold">📊 So Sánh</button>
+      <button onclick="switchTab('storage')" id="mtab-storage" class="px-3 py-1.5 rounded whitespace-nowrap bg-slate-700 text-slate-200">💾 Lưu Trữ & TCO</button>
+      <button onclick="switchTab('protocols')" id="mtab-protocols" class="px-3 py-1.5 rounded whitespace-nowrap bg-slate-700 text-slate-200">⚡ API</button>
+      <button onclick="switchTab('ai')" id="mtab-ai" class="px-3 py-1.5 rounded whitespace-nowrap bg-slate-700 text-slate-200">🤖 AI</button>
+      <button onclick="switchTab('blueprint')" id="mtab-blueprint" class="px-3 py-1.5 rounded whitespace-nowrap bg-slate-700 text-slate-200">🚀 Kiến Trúc</button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+
+    <!-- KPI HIGHLIGHT CARDS -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-start justify-between">
+        <div>
+          <p class="text-xs font-semibold text-slate-500 uppercase">Khuyên Dùng Cho SaaS</p>
+          <h3 class="text-xl font-bold text-slate-900 mt-1">Stalwart Mail</h3>
+          <p class="text-xs text-emerald-600 font-medium mt-1">★ Tối ưu nhất (Rust Engine)</p>
+        </div>
+        <span class="text-2xl p-2 bg-amber-50 text-amber-600 rounded-lg">🏆</span>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-start justify-between">
+        <div>
+          <p class="text-xs font-semibold text-slate-500 uppercase">Tiết Kiệm Chi Phí Storage</p>
+          <h3 class="text-xl font-bold text-slate-900 mt-1">50% - 70%</h3>
+          <p class="text-xs text-slate-500 mt-1">Nhờ S3 + Zstd + Deduplication</p>
+        </div>
+        <span class="text-2xl p-2 bg-blue-50 text-blue-600 rounded-lg">📉</span>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-start justify-between">
+        <div>
+          <p class="text-xs font-semibold text-slate-500 uppercase">Dấu Chân RAM (Stalwart)</p>
+          <h3 class="text-xl font-bold text-slate-900 mt-1">50MB - 200MB</h3>
+          <p class="text-xs text-emerald-600 font-medium mt-1">Thấp hơn 20x so với JVM/Java</p>
+        </div>
+        <span class="text-2xl p-2 bg-emerald-50 text-emerald-600 rounded-lg">⚡</span>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-start justify-between">
+        <div>
+          <p class="text-xs font-semibold text-slate-500 uppercase">Giao Thức Hiện Đại</p>
+          <h3 class="text-xl font-bold text-slate-900 mt-1">JMAP (RFC 8620)</h3>
+          <p class="text-xs text-indigo-600 font-medium mt-1">Phi trạng thái over HTTP/2-3</p>
+        </div>
+        <span class="text-2xl p-2 bg-indigo-50 text-indigo-600 rounded-lg">🌐</span>
+      </div>
+    </section>
+
+    <!-- SECTION 1: OVERVIEW & COMPARISON -->
+    <section id="section-overview" class="space-y-6">
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 flex items-center space-x-2">
+          <span>📊</span>
+          <span>Đánh Giá Toàn Diện Các Nền Tảng Mail Server</span>
+        </h2>
+        <p class="text-sm text-slate-600 mt-2">
+          Phân tích kiến trúc kỹ thuật giữa các giải pháp máy chủ email mã nguồn mở hàng đầu. Lựa chọn một nền tảng SaaS đòi hỏi sự phân tách triệt để giữa tầng tính toán (Compute) và tầng lưu trữ (Storage) để cho phép mở rộng ngang linh hoạt mà không bị điểm nghẽn trạng thái (state bottleneck).
+        </p>
+
+        <!-- Dynamic Chart & Controls -->
+        <div class="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          <div class="lg:col-span-5 bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <h3 class="text-sm font-semibold text-slate-700 mb-3">Mức Tiêu Thụ Bộ Nhớ RAM Cơ Bản (Base RAM Footprint)</h3>
+            <div class="chart-container">
+              <canvas id="ramChart"></canvas>
+            </div>
+            <p class="text-xs text-slate-500 mt-2 text-center italic">Đơn vị: Megabytes (MB). Giá trị càng thấp giúp tăng mật độ Pod Kubernetes.</p>
+          </div>
+
+          <div class="lg:col-span-7 space-y-4">
+            <div class="border border-amber-200 bg-amber-50/50 p-4 rounded-xl">
+              <h4 class="font-bold text-amber-900 text-sm flex items-center space-x-2">
+                <span>💡</span>
+                <span>Nhận Xét Điểm Nổi Bật Kỹ Thuật</span>
+              </h4>
+              <ul class="text-xs text-amber-900/90 space-y-2 mt-2 list-disc list-inside">
+                <li><strong class="text-slate-900">Stalwart Mail Server (Rust):</strong> Đạt mức tiêu thụ RAM cực thấp (~50-200MB) nhờ sự an toàn bộ nhớ của Rust. Hỗ trợ 4 tầng lưu trữ độc lập, nén Zstd native và phân cụm bình đẳng (symmetric P2P).</li>
+                <li><strong class="text-slate-900">WildDuck (Node.js + MongoDB):</strong> Tiếp cận theo nguyên lý <em>no filesystem access</em>. Lưu trữ toàn bộ trên MongoDB GridFS. Phù hợp nếu hạ tầng của bạn đã tối ưu sâu cho MongoDB.</li>
+                <li><strong class="text-slate-900">Mailcow (Dockerized):</strong> Đóng gói cồng kềnh (15+ containers), phụ thuộc vào POSIX Maildir trên đĩa cục bộ, khó khăn khi mở rộng ngang đa vùng (multi-region).</li>
+                <li><strong class="text-slate-900">Apache James & Zimbra:</strong> Chạy trên JVM tiêu tốn tài nguyên RAM lớn (&gt;4GB-8GB), đòi hỏi chi phí bảo trì hạ tầng phức tạp.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filterable Comparison Matrix Table -->
+        <div class="mt-8">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+            <h3 class="text-base font-bold text-slate-900">Bảng So Sánh Chi Tiết Kỹ Thuật</h3>
+            <div class="flex items-center space-x-2">
+              <span class="text-xs text-slate-500 font-medium">Lọc theo tiêu chí:</span>
+              <select id="matrixFilter" onchange="filterMatrixTable()" class="bg-slate-100 border border-slate-300 text-xs rounded-lg p-2 focus:ring-2 focus:ring-amber-500 font-medium">
+                <option value="all">Tất cả tiêu chí</option>
+                <option value="cluster">Mô hình Phân Cụm & Multi-Tenancy</option>
+                <option value="storage">Lưu Trữ & Khử Trùng Lặp</option>
+                <option value="ai">Tích Hợp AI & Giao Thức</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto border border-slate-200 rounded-xl">
+            <table class="w-full text-xs text-left text-slate-700">
+              <thead class="text-xs uppercase bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                <tr>
+                  <th class="px-4 py-3">Nền Tảng</th>
+                  <th class="px-4 py-3">Ngôn Ngữ / Core</th>
+                  <th class="px-4 py-3">Mô Hình Phân Cụm</th>
+                  <th class="px-4 py-3">Compute - Storage</th>
+                  <th class="px-4 py-3">Object Storage (S3)</th>
+                  <th class="px-4 py-3">Khử Trùng Lặp & Nén</th>
+                  <th class="px-4 py-3">Tích Hợp AI</th>
+                </tr>
+              </thead>
+              <tbody id="matrixTableBody" class="divide-y divide-slate-200">
+                <!-- Rows injected dynamically via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: STORAGE & TCO CALCULATOR -->
+    <section id="section-storage" class="hidden space-y-6">
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 flex items-center space-x-2">
+          <span>💾</span>
+          <span>Phân Tích Kiến Trúc Lưu Trữ Đa Tầng & Tính Toán TCO Chi Phí</span>
+        </h2>
+        <p class="text-sm text-slate-600 mt-2">
+          Trong một nền tảng SaaS Email Enterprise, chi phí đĩa cứng lưu trữ chiếm tỷ trọng lớn nhất theo thời gian. So sánh mô hình **Stalwart (Object Storage S3 + Zstd + CAS Deduplication)** vs **WildDuck (MongoDB GridFS)** vs **Mailcow (Maildir POSIX local)**.
+        </p>
+
+        <!-- Storage Architecture Highlights -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+          <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50/40">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-emerald-900 text-sm">Stalwart S3 Engine</span>
+              <span class="text-xs bg-emerald-200 text-emerald-800 font-bold px-2 py-0.5 rounded">Tối Ưu Nhất</span>
+            </div>
+            <p class="text-xs text-emerald-950 mt-2">
+              • **Blob Store:** Đẩy trực tiếp thư/file lên AWS S3 / Cloudflare R2 / MinIO.<br>
+              • **Data Store:** Lưu metadata trên PostgreSQL / FoundationDB.<br>
+              • **CAS Deduplication:** Nhận diện file trùng bằng Content Hash.<br>
+              • **Nén Zstandard:** Tỷ lệ nén giảm 45% - 65% dữ liệu văn bản.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl border border-blue-200 bg-blue-50/40">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-blue-900 text-sm">WildDuck MongoDB GridFS</span>
+              <span class="text-xs bg-blue-200 text-blue-800 font-bold px-2 py-0.5 rounded">Trung Bình</span>
+            </div>
+            <p class="text-xs text-blue-950 mt-2">
+              • **No Filesystem:** Lưu BSON doc và GridFS tệp nhị phân.<br>
+              • **Deduplication:** Trích xuất MIME, băm SHA-256 tệp đính kèm.<br>
+              • **Thách thức TCO:** Duy trì cụm MongoDB NVMe dung lượng hàng chục TB đắt đỏ hơn nhiều so với Object Storage S3.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl border border-slate-300 bg-slate-100/50">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-slate-800 text-sm">Mailcow Local Maildir</span>
+              <span class="text-xs bg-slate-200 text-slate-700 font-bold px-2 py-0.5 rounded">Chi Phí Cao</span>
+            </div>
+            <p class="text-xs text-slate-700 mt-2">
+              • **Gắn kết chặt:** Dữ liệu thư nằm trên POSIX Maildir.<br>
+              • **S3 Limit:** Không hỗ trợ S3 native (chỉ dùng cho backup).<br>
+              • **Rủi ro:** Khóa tệp (file lock contention) khi scale ngang cụm lớn qua NFS/CephFS.
+            </p>
+          </div>
+        </div>
+
+        <!-- Interactive TCO Calculator -->
+        <div class="mt-8 bg-slate-900 text-white p-6 rounded-2xl">
+          <div class="border-b border-slate-800 pb-4 mb-6">
+            <h3 class="text-lg font-bold text-amber-400 flex items-center space-x-2">
+              <span>🧮</span>
+              <span>Công Cụ Tính Toán Ước Tính TCO Chi Phí Lưu Trữ Hàng Tháng</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-1">Điều chỉnh các thông số hạ tầng để thấy sự khác biệt về chi phí lưu trữ giữa các nền tảng.</p>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            <!-- Controls -->
+            <div class="lg:col-span-5 space-y-5">
+              <div>
+                <div class="flex justify-between text-xs font-semibold mb-1">
+                  <label for="storageVolume" class="text-slate-300">Tổng Dung Lượng Thư Thô (Raw Storage):</label>
+                  <span id="storageVolumeVal" class="text-amber-400 font-bold">20 TB</span>
+                </div>
+                <input type="range" id="storageVolume" min="1" max="100" value="20" oninput="calculateTCO()" class="w-full accent-amber-500 bg-slate-800 h-2 rounded-lg cursor-pointer">
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs font-semibold mb-1">
+                  <label for="dupRatio" class="text-slate-300">Tỷ Lệ Tệp Đính Kèm Trùng Lặp (Internal Sharing):</label>
+                  <span id="dupRatioVal" class="text-emerald-400 font-bold">30%</span>
+                </div>
+                <input type="range" id="dupRatio" min="0" max="60" value="30" oninput="calculateTCO()" class="w-full accent-emerald-500 bg-slate-800 h-2 rounded-lg cursor-pointer">
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs font-semibold mb-1">
+                  <label for="s3Cost" class="text-slate-300">Đơn Giá S3 Object Storage ($/GB/Tháng):</label>
+                  <span id="s3CostVal" class="text-blue-400 font-bold">$0.015 (Standard S3)</span>
+                </div>
+                <select id="s3Provider" onchange="calculateTCO()" class="w-full bg-slate-800 border border-slate-700 text-xs rounded-lg p-2 text-slate-200">
+                  <option value="0.015">AWS S3 Standard (~$0.015/GB)</option>
+                  <option value="0.005">Cloudflare R2 / Backblaze B2 (~$0.005/GB - No Egress)</option>
+                  <option value="0.020">MinIO On-Premises SSD Cluster (~$0.020/GB Ops)</option>
+                </select>
+              </div>
+
+              <div class="p-3 bg-slate-800/80 rounded-xl border border-slate-700 text-xs space-y-1">
+                <p class="text-slate-300 font-semibold">Công thức giảm thể tích dữ liệu Stalwart:</p>
+                <p class="text-slate-400 italic">R_reduction = 1 - (S_compressed / S_raw)</p>
+                <p class="text-amber-300 text-[11px]">Áp dụng Zstandard Level 3 + Single-Instance Storage giúp tiết kiệm tới 60% tổng dung lượng thực tế ghi lên S3.</p>
+              </div>
+            </div>
+
+            <!-- TCO Chart Visualizer -->
+            <div class="lg:col-span-7 bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+              <h4 class="text-xs font-bold text-slate-300 text-center mb-2">So Sánh Chi Phí Lưu Trữ Dự Kiến ($ USD / Tháng)</h4>
+              <div class="chart-container">
+                <canvas id="tcoChart"></canvas>
+              </div>
+              <div id="tcoSavingsSummary" class="mt-3 text-center text-xs font-medium text-emerald-400 bg-emerald-950/40 py-2 px-3 rounded-lg border border-emerald-800">
+                <!-- Injected via JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: PROTOCOLS & API -->
+    <section id="section-protocols" class="hidden space-y-6">
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 flex items-center space-x-2">
+          <span>⚡</span>
+          <span>Giao Thức Truy Cập Thư Tín & API Điều Khiển SaaS Auto-Provisioning</span>
+        </h2>
+        <p class="text-sm text-slate-600 mt-2">
+          Một nền tảng SaaS hiện đại đòi hỏi khả năng lập trình hóa toàn bộ quy trình vận hành qua API và giao thức phi trạng thái băng thông cao.
+        </p>
+
+        <!-- Protocols Comparison Tabs -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
+            <h3 class="font-bold text-slate-900 text-base flex items-center justify-between">
+              <span>IMAP4rev2 vs JMAP (RFC 8620)</span>
+              <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-bold">Thế Hệ Mới</span>
+            </h3>
+            
+            <div class="space-y-3 text-xs">
+              <div class="p-3 bg-white rounded-lg border border-slate-200">
+                <span class="font-bold text-slate-800 block mb-1">🔴 IMAP Truyền Thống (RFC 3501):</span>
+                <p class="text-slate-600">Duy trì kết nối socket liên tục (IMAP IDLE), tạo áp lực lớn lên memory/socket của Load Balancer khi mở rộng hàng trăm ngàn user. Tốc độ đồng bộ chậm do phải trao đổi nhiều dòng lệnh đồng bộ (line-based protocols).</p>
+              </div>
+
+              <div class="p-3 bg-white rounded-lg border border-indigo-200">
+                <span class="font-bold text-indigo-900 block mb-1">🟢 JMAP Modern Standard (RFC 8620/8621):</span>
+                <p class="text-indigo-950">Dữ liệu dạng JSON qua HTTP/2-3. Cho phép gom nhiều lệnh vào 1 request (Request Batching), tối ưu pin thiết bị di động, không cần duy trì socket liên tục. Stalwart hỗ trợ native trọn vẹn JMAP.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
+            <h3 class="font-bold text-slate-900 text-base flex items-center justify-between">
+              <span>Giao Diện Tự Động Hóa Quản Trị (API)</span>
+              <span class="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">SaaS Integration</span>
+            </h3>
+
+            <div class="space-y-3 text-xs">
+              <div class="p-3 bg-white rounded-lg border border-slate-200">
+                <span class="font-bold text-slate-800 block mb-1">🔸 WildDuck REST API:</span>
+                <p class="text-slate-600">Tuyệt vời cho tự động hóa với &gt;40 REST endpoints. Cho phép khởi tạo mailbox, cấu hình DKIM, lấy nội dung thư trực tiếp qua HTTP mà không cần đụng tệp cấu hình.</p>
+              </div>
+
+              <div class="p-3 bg-white rounded-lg border border-slate-200">
+                <span class="font-bold text-slate-800 block mb-1">🔸 Stalwart JMAP Management API & Webhooks:</span>
+                <p class="text-slate-600">Thống nhất quản trị bằng chính chuẩn JMAP. Hỗ trợ **MTA Hooks** kích hoạt gọi HTTP REST tới backend SaaS ở từng giai đoạn phiên SMTP (CONNECT, AUTH, RCPT, DATA).</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Snippet Viewer -->
+        <div class="mt-6">
+          <div class="flex items-center justify-between bg-slate-900 text-white px-4 py-3 rounded-t-xl">
+            <span class="text-xs font-bold text-slate-300">Ví Dụ Code Tương Tác Cấu Hình / Webhook / Sieve Script</span>
+            <div class="flex space-x-2">
+              <button onclick="showCodeSnippet('sieve')" id="btn-code-sieve" class="px-2.5 py-1 text-xs rounded bg-amber-500 text-slate-900 font-bold">Stalwart Sieve LLM</button>
+              <button onclick="showCodeSnippet('webhook')" id="btn-code-webhook" class="px-2.5 py-1 text-xs rounded bg-slate-800 text-slate-300 hover:text-white">MTA Webhook Payload</button>
+              <button onclick="showCodeSnippet('jmap')" id="btn-code-jmap" class="px-2.5 py-1 text-xs rounded bg-slate-800 text-slate-300 hover:text-white">JMAP Request Batch</button>
+            </div>
+          </div>
+          <pre id="codeSnippetBox" class="bg-slate-950 text-emerald-400 p-4 rounded-b-xl text-xs font-mono overflow-x-auto border-x border-b border-slate-800 leading-relaxed"></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: AI INTEGRATION -->
+    <section id="section-ai" class="hidden space-y-6">
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 flex items-center space-x-2">
+          <span>🤖</span>
+          <span>Kiến Trúc Tích Hợp Trí Tuệ Nhân Tạo (AI) Phân Tích Luồng Thư</span>
+        </h2>
+        <p class="text-sm text-slate-600 mt-2">
+          Hệ thống email SaaS doanh nghiệp hiện đại yêu cầu AI chống tấn công giả mạo (CEO Fraud, Social Engineering) và tóm tắt thư tự động.
+        </p>
+
+        <!-- AI Architecture Modes -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          <!-- In-Line MTA Mode -->
+          <div class="border border-purple-200 bg-purple-50/30 p-5 rounded-xl space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="font-bold text-purple-950 text-sm">1. Processing Nội Dòng Trực Tiếp (In-Line MTA Engine)</h3>
+              <span class="text-xs bg-purple-200 text-purple-800 font-bold px-2 py-0.5 rounded">Stalwart Native</span>
+            </div>
+            <p class="text-xs text-slate-700 leading-relaxed">
+              Xử lý ngay trong phiên nhận thư SMTP thông qua 2 tầng:
+            </p>
+            <ul class="text-xs text-slate-700 space-y-1.5 list-disc list-inside">
+              <li><strong>Tầng 1 (FTRL-Proximal ML):</strong> Thuật toán máy học thống kê cực nhanh dựa trên Cuckoo Feature Hashing. Cập nhật trọng số realtime.</li>
+              <li><strong>Tầng 2 (LLM Prompting via Sieve):</strong> Mở rộng Sieve script với hàm `llm_prompt()`. Thư nằm trong vùng nghi vấn sẽ gửi tới LLM (vLLM / LocalAI / OpenAI) để phân tích ngữ nghĩa.</li>
+            </ul>
+          </div>
+
+          <!-- Async Event-Driven Pipeline -->
+          <div class="border border-blue-200 bg-blue-50/30 p-5 rounded-xl space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="font-bold text-blue-950 text-sm">2. Luồng Bất Đồng Bộ Hướng Sự Kiện (Async Event Pipeline)</h3>
+              <span class="text-xs bg-blue-200 text-blue-800 font-bold px-2 py-0.5 rounded">High Throughput</span>
+            </div>
+            <p class="text-xs text-slate-700 leading-relaxed">
+              Phục vụ tính năng tóm tắt hòm thư, gợi ý câu trả lời thông minh mà không gây trễ phiên SMTP:
+            </p>
+            <ul class="text-xs text-slate-700 space-y-1.5 list-disc list-inside">
+              <li>Khi có thư mới ghi nhận vào S3, Mail Server phát sự kiện **Webhook** tới Message Queue (Kafka/Redis Stream).</li>
+              <li>Các **Worker Vi Dịch Vụ** lấy thư qua JMAP API, xử lý tóm tắt qua AI LLM và lưu kết quả vào metadata hòm thư.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Interactive AI Sieve Decision Simulator -->
+        <div class="mt-8 bg-slate-900 text-white p-6 rounded-2xl">
+          <h3 class="text-base font-bold text-amber-400 mb-2 flex items-center space-x-2">
+            <span>⚙️</span>
+            <span>Mô Phỏng Bộ Lọc Sieve AI Stalwart (Decision Threshold Simulator)</span>
+          </h3>
+          <p class="text-xs text-slate-400 mb-6">Thử nghiệm cách Stalwart kết hợp giữa FTRL Fast ML và LLM Deep Inspection để quyết định số phận bức thư.</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+            <div class="md:col-span-5 space-y-4">
+              <div>
+                <label for="ftrlScore" class="block text-xs font-semibold text-slate-300 mb-1">Điểm Số Thống Kê FTRL ML (-2.0 đến +2.0):</label>
+                <input type="range" id="ftrlScore" min="-20" max="20" value="0" oninput="simulateAISieve()" class="w-full accent-amber-500 bg-slate-800 h-2 rounded-lg cursor-pointer">
+                <div class="flex justify-between text-[11px] text-slate-400 mt-1">
+                  <span>-2.0 (Chắc chắn Spam)</span>
+                  <span id="ftrlScoreVal" class="text-amber-400 font-bold">0.0 (Vùng Nghi Vấn)</span>
+                  <span>+2.0 (Rất An Toàn)</span>
+                </div>
+              </div>
+
+              <div class="p-3 bg-slate-800 rounded-xl border border-slate-700 text-xs text-slate-300 space-y-1">
+                <p class="font-bold text-amber-400">Luồng Quyết Định:</p>
+                <p id="simLogicDesc" class="text-slate-300">Nằm trong khoảng nghi vấn [-1.0, 1.0] ➔ Kích hoạt hàm `llm_prompt()` gọi LLM phân tích ngữ nghĩa sâu.</p>
+              </div>
+            </div>
+
+            <div class="md:col-span-7 bg-slate-950 p-5 rounded-xl border border-slate-800 text-center space-y-3">
+              <span class="text-xs uppercase tracking-wider text-slate-500 font-bold block">Kết Quả Xử Lý Của Hệ Thống Mail Server</span>
+              <div id="simResultBadge" class="inline-block px-4 py-2 rounded-xl text-sm font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                🔍 Bật LLM Analysis (Deep Inspection)
+              </div>
+              <p id="simActionText" class="text-xs text-slate-400">Thư được chuyển sang cụm AI vLLM. Nếu LLM phản hồi "NGUY_HIEM" ➔ Cách ly thư vào Quarantine Folder.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 5: REFERENCE ARCHITECTURE BLUEPRINT -->
+    <section id="section-blueprint" class="hidden space-y-6">
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 flex items-center space-x-2">
+          <span>🚀</span>
+          <span>Mô Hình Hạ Tầng Triển Khai Tham Chiếu Tối Ưu (SaaS Reference Architecture)</span>
+        </h2>
+        <p class="text-sm text-slate-600 mt-2">
+          Kiến trúc phân cụm phân tán đa tầng được thiết kế riêng cho nền tảng Stalwart Mail Server kết hợp cùng Kubernetes, PostgreSQL HA và S3 Object Storage. Click vào từng tầng để xem chi tiết thông số kỹ thuật.
+        </p>
+
+        <!-- Interactive Architecture Tier Diagram (No SVG, pure CSS Cards) -->
+        <div class="mt-6 space-y-4">
+          <!-- Tier 1: Edge & Ingress -->
+          <div onclick="selectArchTier('edge')" id="tier-card-edge" class="cursor-pointer p-4 rounded-xl border-2 border-slate-800 bg-slate-900 text-white transition hover:border-amber-400">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <span class="text-xl">🌐</span>
+                <div>
+                  <h3 class="font-bold text-sm text-amber-400">Tầng 1: Edge & Ingress Load Balancer Layer</h3>
+                  <p class="text-xs text-slate-400">HAProxy / Envoy Proxy / NGINX Ingress Controller</p>
+                </div>
+              </div>
+              <span class="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full font-mono">Port 25, 465, 587, 993, 443</span>
+            </div>
+          </div>
+
+          <!-- Tier 2: Stateless Compute Nodes -->
+          <div onclick="selectArchTier('app')" id="tier-card-app" class="cursor-pointer p-4 rounded-xl border-2 border-emerald-600 bg-emerald-950/20 text-slate-900 transition hover:border-emerald-500">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <span class="text-xl">⚡</span>
+                <div>
+                  <h3 class="font-bold text-sm text-emerald-900">Tầng 2: Stateless Compute Pod Cluster (Kubernetes Auto-Scaling)</h3>
+                  <p class="text-xs text-emerald-800">Cụm Stalwart Mail Server Nodes (Symmetric P2P Gossip Cluster)</p>
+                </div>
+              </div>
+              <span class="text-xs bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full font-bold">50-200MB RAM / Pod</span>
+            </div>
+          </div>
+
+          <!-- Tier 3: Metadata & Distributed Locks -->
+          <div onclick="selectArchTier('db')" id="tier-card-db" class="cursor-pointer p-4 rounded-xl border-2 border-blue-600 bg-blue-950/20 text-slate-900 transition hover:border-blue-500">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <span class="text-xl">🗄️</span>
+                <div>
+                  <h3 class="font-bold text-sm text-blue-900">Tầng 3: Metadata DB & Session Lock Layer</h3>
+                  <p class="text-xs text-blue-800">PostgreSQL HA (Patroni) / FoundationDB + Redis Sentinel Cluster</p>
+                </div>
+              </div>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2.5 py-1 rounded-full font-bold">Sub-millisecond Queries</span>
+            </div>
+          </div>
+
+          <!-- Tier 4: Object Storage & AI Cluster -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div onclick="selectArchTier('s3')" id="tier-card-s3" class="cursor-pointer p-4 rounded-xl border-2 border-amber-600 bg-amber-950/20 text-slate-900 transition hover:border-amber-500">
+              <div class="flex items-center space-x-3">
+                <span class="text-xl">📦</span>
+                <div>
+                  <h3 class="font-bold text-sm text-amber-900">Tầng 4A: Scalable S3 Blob Storage</h3>
+                  <p class="text-xs text-amber-800">Cloudflare R2 / AWS S3 / MinIO (Zstd + CAS)</p>
+                </div>
+              </div>
+            </div>
+
+            <div onclick="selectArchTier('ai')" id="tier-card-ai" class="cursor-pointer p-4 rounded-xl border-2 border-purple-600 bg-purple-950/20 text-slate-900 transition hover:border-purple-500">
+              <div class="flex items-center space-x-3">
+                <span class="text-xl">🧠</span>
+                <div>
+                  <h3 class="font-bold text-sm text-purple-900">Tầng 4B: AI Inference Cluster</h3>
+                  <p class="text-xs text-purple-800">vLLM Cluster / OpenAI API / Async Workers</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tier Dynamic Detail Box -->
+        <div id="archTierDetailBox" class="mt-6 p-5 bg-slate-900 text-white rounded-xl border border-slate-800 space-y-2">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-slate-900 text-slate-400 text-xs py-4 border-t border-slate-800 mt-8">
+    <div class="max-w-7xl mx-auto px-4 text-center">
+      <p>© 2026 Báo Cáo Nghiên Cứu Hạ Tầng SaaS Email Enterprise. Xây dựng trên các chuẩn RFC 8620 (JMAP), RFC 9051 (IMAP) & S3 Object Storage API.</p>
+    </div>
+  </footer>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // --- DATA STORES ---
+    const platformData = [
+      {
+        name: 'Stalwart Mail',
+        lang: 'Rust',
+        ram: 150,
+        cluster: 'Phân tán P2P / Gossip Bus',
+        computeStorage: 'Tách biệt hoàn toàn (Stateless)',
+        s3: 'Tích hợp Native (Blob Store)',
+        dedup: 'CAS + Zstandard (zstd) Compression',
+        ai: 'Sieve LLM Prompting + FTRL ML',
+        cat: ['cluster', 'storage', 'ai']
+      },
+      {
+        name: 'WildDuck Suite',
+        lang: 'Node.js',
+        ram: 600,
+        cluster: 'Stateless + MongoDB Cluster',
+        computeStorage: 'Tách biệt hoàn toàn',
+        s3: 'Hỗ trợ hạn chế qua Plugin GridFS',
+        dedup: 'SHA-256 Attachment Deduplication',
+        ai: 'Tích hợp qua Webhooks / External API',
+        cat: ['cluster', 'storage']
+      },
+      {
+        name: 'Mailcow dockerized',
+        lang: 'C, PHP, Perl',
+        ram: 6144,
+        cluster: 'Single-Host (Monolithic Compose)',
+        computeStorage: 'Gắn chặt với POSIX Maildir',
+        s3: 'Chỉ dùng cho Backup',
+        dedup: 'Dbox SIS (Hạn chế)',
+        ai: 'Bộ lọc Rspamd Neural',
+        cat: ['ai']
+      },
+      {
+        name: 'Apache James',
+        lang: 'Java (JVM)',
+        ram: 6144,
+        cluster: 'Vi dịch vụ phân tán (Cassandra/Kafka)',
+        computeStorage: 'Tách biệt hoàn toàn',
+        s3: 'Tích hợp Native',
+        dedup: 'Deduplication Store',
+        ai: 'Mailet mở rộng',
+        cat: ['cluster', 'storage']
+      },
+      {
+        name: 'Zimbra Suite',
+        lang: 'Java, C',
+        ram: 12288,
+        cluster: 'Đa máy chủ cổ điển (Multi-Server)',
+        computeStorage: 'Hạn chế (Phụ thuộc POSIX)',
+        s3: 'Cần Module thương mại phụ trợ',
+        dedup: 'Hạn chế',
+        ai: 'Hạn chế',
+        cat: []
+      }
+    ];
+
+    const codeSnippets = {
+      sieve: `# Kịch bản Stalwart Sieve: Gọi LLM trực tiếp trong phiên nhận thư SMTP DATA
+require ["fileinto", "vnd.stalwart.expressions"];
+
+# 1. Chuẩn bị Prompt hướng dẫn mô hình AI
+let "prompt" text: "Bạn là chuyên gia an toàn thông tin email. Hãy phân tích nội dung sau để phát hiện dấu hiệu tấn công phi kỹ thuật (Social Engineering) hoặc chuyển tiền bất thường. Phản hồi chính xác một trong hai từ: NGUY_HIEM hoặc AN_TOAN." . ;
+
+# 2. Thực thi hàm nội tại llm_prompt() tới cụm vLLM / LocalAI
+let "ai_result" llm_prompt("security-llm-model", "\${prompt}\\n\\nNội dung thư: \${body}", 0.1);
+
+# 3. Phân loại thư tự động dựa trên phản hồi AI
+if string :is "\${ai_result}" "NGUY_HIEM" {
+    fileinto "Quarantine";
+    stop;
+}`,
+      webhook: `// MTA Webhook Payload: Phát tín hiệu bất đồng bộ khi phiên SMTP hoàn tất
+{
+  "event": "email.received",
+  "message_id": "<20261001.0954.stalwart@domain.com>",
+  "tenant_id": "tenant_enterprise_01",
+  "sender": "ceo@external-company.com",
+  "recipients": ["finance-lead@your-saas.com"],
+  "subject": "Yêu cầu chuyển khoản thanh toán hợp đồng khẩn cấp",
+  "storage_blob_key": "s3://mail-blobs/2026/10/01/hash_8f9a2b.zst",
+  "security_flags": {
+    "spf": "pass",
+    "dkim": "pass",
+    "ftrl_score": 0.05
+  }
+}`,
+      jmap: `// JMAP Request (RFC 8620): Request Batching gom nhiều thao tác trong 1 HTTP Post
+[
+  ["Email/get", {
+    "accountId": "u1234",
+    "ids": ["m9876"],
+    "properties": ["id", "threadId", "subject", "from", "sentAt"]
+  }, "a"],
+  ["Mailbox/get", {
+    "accountId": "u1234",
+    "ids": ["inbox_id"]
+  }, "b"]
+]`
+    };
+
+    const archTierDetails = {
+      edge: {
+        title: '🌐 Tầng 1: Edge & Ingress Load Balancer Layer',
+        desc: 'Tiếp nhận kết nối mạng từ Internet. Phân tách rõ giữa hai nhóm giao thức: kết nối ngắn hạn (SMTP) và kết nối dài hạn (IMAP IDLE / HTTP/2-3 JMAP). Tự động ngắt TLS termination và hỗ trợ PROXY Protocol v2 để giữ nguyên IP gốc của client.'
+      },
+      app: {
+        title: '⚡ Tầng 2: Stateless Compute Pod Cluster (Stalwart Nodes)',
+        desc: 'Trái tim tính toán của hệ thống. Nhờ được viết bằng Rust, các Pod Stalwart tiêu thụ tài nguyên cực kỳ ít (~50-200MB RAM), không ghi bất kỳ dữ liệu bất biến nào lên đĩa đệm cục bộ. Có thể tự động co giãn (Horizontal Pod Autoscaler) theo lưu lượng SMTP/JMAP realtime.'
+      },
+      db: {
+        title: '🗄️ Tầng 3: Metadata DB & Session Lock Layer',
+        desc: 'Quản lý siêu dữ liệu có cấu trúc: tài khoản, cấu trúc thư mục, trạng thái cờ (Read/Unread), token xác thực. Sử dụng PostgreSQL HA với Patroni hoặc FoundationDB cho throughput cực cao, kết hợp Redis Sentinel để duy trì session lock và Rate Limiting.'
+      },
+      s3: {
+        title: '📦 Tầng 4A: Scalable S3 Blob Storage',
+        desc: 'Nơi lưu trữ 95%+ dung lượng thực tế của toàn bộ hệ thống mail. Thân thư và tệp đính kèm được nén Zstandard (level 3) và kiểm tra Content Hash (CAS) trước khi lưu trực tiếp lên Cloudflare R2 / AWS S3 / MinIO. Đạt độ bền dữ liệu 99.999999999% (11 nines).'
+      },
+      ai: {
+        title: '🧠 Tầng 4B: AI Inference Cluster',
+        desc: 'Tích hợp vLLM cluster chạy các mô hình ngôn ngữ vừa và nhỏ (như Llama-3-8B-Instruct hoặc Mistral) để hỗ trợ tóm tắt chuỗi thư, phát hiện phishing ngữ nghĩa và tự động gợi ý bản thảo câu trả lời.'
+      }
+    };
+
+    // --- CHART INSTANCES ---
+    let ramChartInstance = null;
+    let tcoChartInstance = null;
+
+    // --- INITIALIZATION ---
+    document.addEventListener('DOMContentLoaded', () => {
+      renderRamChart();
+      renderMatrixTable('all');
+      initTCOCalculator();
+      showCodeSnippet('sieve');
+      simulateAISieve();
+      selectArchTier('app');
+    });
+
+    // --- NAVIGATION LOGIC ---
+    function switchTab(tabId) {
+      const tabs = ['overview', 'storage', 'protocols', 'ai', 'blueprint'];
+      tabs.forEach(t => {
+        const sec = document.getElementById(`section-${t}`);
+        const btn = document.getElementById(`tab-${t}`);
+        const mbtn = document.getElementById(`mtab-${t}`);
+
+        if (t === tabId) {
+          sec.classList.remove('hidden');
+          if (btn) {
+            btn.className = "px-3 py-2 rounded-md text-sm font-medium bg-slate-800 text-amber-400 transition font-bold";
+          }
+          if (mbtn) {
+            mbtn.className = "px-3 py-1.5 rounded whitespace-nowrap bg-amber-500 text-slate-900 font-bold";
+          }
+        } else {
+          sec.classList.add('hidden');
+          if (btn) {
+            btn.className = "px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition";
+          }
+          if (mbtn) {
+            mbtn.className = "px-3 py-1.5 rounded whitespace-nowrap bg-slate-700 text-slate-200";
+          }
+        }
+      });
+
+      // Resize chart on tab visibility change
+      if (tabId === 'storage' && tcoChartInstance) {
+        setTimeout(() => tcoChartInstance.resize(), 100);
+      }
+      if (tabId === 'overview' && ramChartInstance) {
+        setTimeout(() => ramChartInstance.resize(), 100);
+      }
+    }
+
+    // --- SECTION 1: RAM CHART & MATRIX TABLE ---
+    function renderRamChart() {
+      const ctx = document.getElementById('ramChart').getContext('2d');
+      ramChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Stalwart (Rust)', 'WildDuck (Node)', 'Mailcow (Docker)', 'Apache James', 'Zimbra Suite'],
+          datasets: [{
+            label: 'RAM Footprint Cơ Bản (MB)',
+            data: [150, 600, 6144, 6144, 12288],
+            backgroundColor: [
+              '#059669', // Emerald for Stalwart
+              '#2563eb', // Blue for WildDuck
+              '#d97706', // Amber for Mailcow
+              '#64748b', // Slate for James
+              '#ef4444'  // Red for Zimbra
+            ],
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (context) => ` Nhu cầu RAM tối thiểu: ${context.raw} MB`
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Megabytes (MB)', font: { size: 11 } }
+            },
+            x: {
+              ticks: { font: { size: 10 } }
+            }
+          }
+        }
+      });
+    }
+
+    function renderMatrixTable(filterCategory) {
+      const tbody = document.getElementById('matrixTableBody');
+      tbody.innerHTML = '';
+
+      platformData.forEach(p => {
+        if (filterCategory !== 'all' && !p.cat.includes(filterCategory)) {
+          return;
+        }
+
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50/80 transition';
+        tr.innerHTML = `
+          <td class="px-4 py-3 font-bold text-slate-900">${p.name}</td>
+          <td class="px-4 py-3"><span class="bg-slate-100 text-slate-800 px-2 py-0.5 rounded font-mono text-[11px]">${p.lang}</span></td>
+          <td class="px-4 py-3">${p.cluster}</td>
+          <td class="px-4 py-3">${p.computeStorage}</td>
+          <td class="px-4 py-3">${p.s3}</td>
+          <td class="px-4 py-3">${p.dedup}</td>
+          <td class="px-4 py-3"><span class="text-indigo-700 font-medium">${p.ai}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterMatrixTable() {
+      const val = document.getElementById('matrixFilter').value;
+      renderMatrixTable(val);
+    }
+
+    // --- SECTION 2: TCO CALCULATOR ---
+    function initTCOCalculator() {
+      const ctx = document.getElementById('tcoChart').getContext('2d');
+      tcoChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Stalwart (S3 + Zstd)', 'WildDuck (Mongo NVMe)', 'Mailcow (Local SSD)'],
+          datasets: [{
+            label: 'Chi Phí Ước Tính ($/Tháng)',
+            data: [0, 0, 0],
+            backgroundColor: ['#059669', '#2563eb', '#64748b'],
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => ` Chi phí: $${ctx.raw.toLocaleString('en-US', {maximumFractionDigits: 0})} USD / tháng`
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'USD ($) / Tháng', font: { size: 11 } }
+            }
+          }
+        }
+      });
+
+      calculateTCO();
+    }
+
+    function calculateTCO() {
+      const rawTB = parseFloat(document.getElementById('storageVolume').value);
+      const dupPercent = parseFloat(document.getElementById('dupRatio').value);
+      const s3UnitCost = parseFloat(document.getElementById('s3Provider').value);
+
+      document.getElementById('storageVolumeVal').innerText = `${rawTB} TB`;
+      document.getElementById('dupRatioVal').innerText = `${dupPercent}%`;
+
+      // Update unit cost label
+      const providerSelect = document.getElementById('s3Provider');
+      const selectedText = providerSelect.options[providerSelect.selectedIndex].text;
+      document.getElementById('s3CostVal').innerText = selectedText.split('(')[0];
+
+      const rawGB = rawTB * 1000;
+
+      // 1. Stalwart Cost Calculation:
+      // Zstd compression reduces text by ~50%. Attachment deduplication removes dupPercent of remaining attachments.
+      // Effective data on S3 = rawGB * (1 - 0.50) * (1 - (dupPercent / 100) * 0.5)
+      const compressedGB_Stalwart = rawGB * 0.50; 
+      const finalGB_Stalwart = compressedGB_Stalwart * (1 - (dupPercent / 100) * 0.4);
+      const stalwartCost = (finalGB_Stalwart * s3UnitCost) + (rawGB * 0.002); // Add minor metadata DB cost
+
+      // 2. WildDuck Cost Calculation (MongoDB GridFS on NVMe SSD):
+      // Mongo NVMe storage is roughly $0.08 / GB / month in enterprise clusters + Mongo replication overhead (x2)
+      const compressedGB_Wildduck = rawGB * 0.70; // Brotli/BSON
+      const finalGB_Wildduck = compressedGB_Wildduck * (1 - (dupPercent / 100) * 0.3);
+      const wildduckCost = finalGB_Wildduck * 0.08 * 1.5; // 1.5x for replication cluster
+
+      // 3. Mailcow Cost Calculation (POSIX Local NVMe/SSD):
+      // POSIX Local NVMe is roughly $0.07 / GB / month without effective S3 deduplication
+      const finalGB_Mailcow = rawGB * 0.85; // Light compression
+      const mailcowCost = finalGB_Mailcow * 0.07;
+
+      // Update Chart
+      tcoChartInstance.data.datasets[0].data = [
+        Math.round(stalwartCost),
+        Math.round(wildduckCost),
+        Math.round(mailcowCost)
+      ];
+      tcoChartInstance.update();
+
+      // Update Summary Text
+      const savingsVSWildduck = Math.round(((wildduckCost - stalwartCost) / wildduckCost) * 100);
+      const monthlySavings = Math.round(wildduckCost - stalwartCost);
+
+      document.getElementById('tcoSavingsSummary').innerHTML = `
+        💡 Mô hình <strong>Stalwart + S3</strong> tiết kiệm khoảng <strong>${savingsVSWildduck}%</strong> (tương đương <strong>$${monthlySavings.toLocaleString()}/tháng</strong>) so với việc vận hành lưu trữ tệp trên MongoDB Cluster!
+      `;
+    }
+
+    // --- SECTION 3: CODE SNIPPET VIEWER ---
+    function showCodeSnippet(type) {
+      const box = document.getElementById('codeSnippetBox');
+      box.textContent = codeSnippets[type] || '';
+
+      const btns = ['sieve', 'webhook', 'jmap'];
+      btns.forEach(b => {
+        const btnEl = document.getElementById(`btn-code-${b}`);
+        if (b === type) {
+          btnEl.className = "px-2.5 py-1 text-xs rounded bg-amber-500 text-slate-900 font-bold";
+        } else {
+          btnEl.className = "px-2.5 py-1 text-xs rounded bg-slate-800 text-slate-300 hover:text-white";
+        }
+      });
+    }
+
+    // --- SECTION 4: AI SIMULATOR ---
+    function simulateAISieve() {
+      const scoreRaw = parseInt(document.getElementById('ftrlScore').value);
+      const score = (scoreRaw / 10).toFixed(1);
+      document.getElementById('ftrlScoreVal').innerText = `${score}`;
+
+      const badge = document.getElementById('simResultBadge');
+      const actionText = document.getElementById('simActionText');
+      const desc = document.getElementById('simLogicDesc');
+
+      if (score < -1.0) {
+        // High Spam confidence
+        badge.className = "inline-block px-4 py-2 rounded-xl text-sm font-bold bg-red-500/20 text-red-300 border border-red-500/30";
+        badge.innerText = "🚫 Chặn Thư Trực Tiếp (Reject at SMTP)";
+        actionText.innerText = "Thuật toán FTRL xác nhận thư rác độc hại với độ tin cậy cao. Thư bị từ chối ngay trong phiên kết nối SMTP mà không cần tốn chi phí gọi AI LLM.";
+        desc.innerText = "Điểm FTRL < -1.0 ➔ Đã đủ điều kiện kết luận Spam. Bỏ qua bước kiểm tra LLM.";
+      } else if (score > 1.0) {
+        // High Safe confidence
+        badge.className = "inline-block px-4 py-2 rounded-xl text-sm font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+        badge.innerText = "✅ Cho Phép Vào Inbox (Pass to Inbox)";
+        actionText.innerText = "Thư từ đối tác uy tín, điểm danh tiếng cao. Thư được ghi trực tiếp vào S3 Blob Store và xuất hiện lập tức trong hòm thư Inbox người dùng.";
+        desc.innerText = "Điểm FTRL > +1.0 ➔ Đã đủ điều kiện kết luận An toàn. Bỏ qua bước kiểm tra LLM.";
+      } else {
+        // Grey area -> Trigger LLM
+        badge.className = "inline-block px-4 py-2 rounded-xl text-sm font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30";
+        badge.innerText = "🔍 Bật LLM Analysis (Deep Inspection)";
+        actionText.innerText = "Thư rơi vào dải nghi vấn [-1.0, 1.0]. Kịch bản Sieve tự động kích hoạt hàm llm_prompt() gửi nội dung tới mô hình vLLM để phân tích ngữ nghĩa lừa đảo.";
+        desc.innerText = "Nằm trong khoảng nghi vấn [-1.0, 1.0] ➔ Kích hoạt hàm llm_prompt() gọi LLM phân tích ngữ nghĩa sâu.";
+      }
+    }
+
+    // --- SECTION 5: REFERENCE BLUEPRINT ---
+    function selectArchTier(tierKey) {
+      const tiers = ['edge', 'app', 'db', 's3', 'ai'];
+      tiers.forEach(t => {
+        const card = document.getElementById(`tier-card-${t}`);
+        if (card) {
+          if (t === tierKey) {
+            card.classList.add('ring-2', 'ring-amber-400');
+          } else {
+            card.classList.remove('ring-2', 'ring-amber-400');
+          }
+        }
+      });
+
+      const detail = archTierDetails[tierKey];
+      const box = document.getElementById('archTierDetailBox');
+      if (detail && box) {
+        box.innerHTML = `
+          <h4 class="font-bold text-amber-400 text-sm flex items-center space-x-2">
+            <span>📌</span>
+            <span>${detail.title}</span>
+          </h4>
+          <p class="text-xs text-slate-300 leading-relaxed mt-1">${detail.desc}</p>
+        `;
+      }
+    }
+  </script>
+</body>
+</html>
